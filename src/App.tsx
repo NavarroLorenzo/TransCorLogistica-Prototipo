@@ -20,9 +20,37 @@ import './App.css'
 type HostTab = 'administracion' | 'puntos' | 'operacion'
 type PortalTab = 'inicio' | 'nuevo' | 'masiva' | 'mis-envios' | 'retiro' | 'facturas'
 type TarifaTab = 'zonas' | 'base' | 'convenios' | 'recargos'
+type UserRole = 'cliente' | 'host' | 'admin'
+
+const roleConfig: Record<UserRole, {
+  label: string
+  description: string
+  initialScreen: Screen
+  allowedScreens: Screen[]
+}> = {
+  cliente: {
+    label: 'Cliente',
+    description: 'Portal corporativo, seguimiento, envios y solicitudes de retiro.',
+    initialScreen: 'portal',
+    allowedScreens: ['portal', 'tracking', 'retiros'],
+  },
+  host: {
+    label: 'Punto Host',
+    description: 'Operacion del punto: recibir paquetes, validar retiros, envios y devoluciones.',
+    initialScreen: 'hosts',
+    allowedScreens: ['hosts', 'tracking'],
+  },
+  admin: {
+    label: 'Admin',
+    description: 'Vista operativa completa para gestionar envios, hosts, tarifas y zonas.',
+    initialScreen: 'dashboard',
+    allowedScreens: ['dashboard', 'nuevo-envio', 'tracking', 'portal', 'retiros', 'hosts', 'tarifas'],
+  },
+}
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false)
+  const [role, setRole] = useState<UserRole>('admin')
   const [screen, setScreen] = useState<Screen>('dashboard')
   const [toast, setToast] = useState('')
   const [modal, setModal] = useState(false)
@@ -46,9 +74,25 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  if (!loggedIn) {
-    return <Login onLogin={() => setLoggedIn(true)} />
+  function handleLogin(selectedRole: UserRole) {
+    setRole(selectedRole)
+    setScreen(roleConfig[selectedRole].initialScreen)
+    if (selectedRole === 'host') {
+      setHostTab('operacion')
+    }
+    if (selectedRole === 'cliente') {
+      setPortalTab('inicio')
+    }
+    setLoggedIn(true)
   }
+
+  if (!loggedIn) {
+    return <Login onLogin={handleLogin} />
+  }
+
+  const currentRole = roleConfig[role]
+  const availableNavItems = navItems.filter((item) => currentRole.allowedScreens.includes(item.key))
+  const currentUserLabel = role === 'cliente' ? 'Cliente demo' : role === 'host' ? 'Punto Host demo' : 'Operador TransCor'
 
   return (
     <div className="app-shell">
@@ -60,8 +104,12 @@ function App() {
             <span>Logistica</span>
           </div>
         </div>
+        <div className="role-summary">
+          <span>Vista activa</span>
+          <strong>{currentRole.label}</strong>
+        </div>
         <nav className="side-nav">
-          {navItems.map((item) => (
+          {availableNavItems.map((item) => (
             <button
               className={screen === item.key ? 'active' : ''}
               key={item.key}
@@ -78,17 +126,18 @@ function App() {
       <main className="main-area">
         <header className="topbar">
           <div>
-            <span className="muted">Modulo A</span>
-            <strong>Gestion de Envios + Portal del Cliente</strong>
+            <span className="muted">Modulo A | {currentRole.label}</span>
+            <strong>{currentRole.description}</strong>
           </div>
           <div className="user-chip">
             <button className="icon-button" onClick={() => notify('Tenes 4 notificaciones operativas nuevas.')} type="button">
               !
             </button>
             <div>
-              <strong>Operador TransCor</strong>
-              <span>Rol: Operaciones</span>
+              <strong>{currentUserLabel}</strong>
+              <span>Rol: {currentRole.label}</span>
             </div>
+            <button onClick={() => setLoggedIn(false)} type="button">Cambiar vista</button>
           </div>
         </header>
 
@@ -220,7 +269,9 @@ function App() {
   )
 }
 
-function Login({ onLogin }: { onLogin: () => void }) {
+function Login({ onLogin }: { onLogin: (role: UserRole) => void }) {
+  const [selectedRole, setSelectedRole] = useState<UserRole>('admin')
+
   return (
     <div className="login-page">
       <section className="login-panel">
@@ -233,7 +284,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
           className="login-form"
           onSubmit={(event) => {
             event.preventDefault()
-            onLogin()
+            onLogin(selectedRole)
           }}
         >
           <label>
@@ -244,6 +295,23 @@ function Login({ onLogin }: { onLogin: () => void }) {
             Contrasena
             <input defaultValue="demo2026" type="password" />
           </label>
+          <div className="prototype-note">
+            <strong>Seleccion de perfil solo para el prototipo</strong>
+            <span>Esta opcion esta habilitada unicamente para la presentacion actual. En la version real no existira este selector al iniciar sesion.</span>
+          </div>
+          <div className="role-options" aria-label="Seleccionar vista de acceso">
+            {(Object.keys(roleConfig) as UserRole[]).map((roleKey) => (
+              <button
+                className={selectedRole === roleKey ? 'role-option active' : 'role-option'}
+                key={roleKey}
+                onClick={() => setSelectedRole(roleKey)}
+                type="button"
+              >
+                <strong>{roleConfig[roleKey].label}</strong>
+                <span>{roleConfig[roleKey].description}</span>
+              </button>
+            ))}
+          </div>
           <button className="primary full" type="submit">
             Ingresar
           </button>
