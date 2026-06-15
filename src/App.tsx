@@ -20,7 +20,7 @@ import './App.css'
 type HostTab = 'administracion' | 'puntos' | 'operacion'
 type PortalTab = 'inicio' | 'nuevo' | 'masiva' | 'mis-envios' | 'retiro' | 'facturas'
 type TarifaTab = 'zonas' | 'base' | 'convenios' | 'recargos'
-type UserRole = 'cliente' | 'host' | 'admin'
+type UserRole = 'cliente' | 'host'
 
 const roleConfig: Record<UserRole, {
   label: string
@@ -40,18 +40,12 @@ const roleConfig: Record<UserRole, {
     initialScreen: 'hosts',
     allowedScreens: ['hosts', 'tracking'],
   },
-  admin: {
-    label: 'Admin',
-    description: 'Vista operativa completa para gestionar envios, hosts, tarifas y zonas.',
-    initialScreen: 'dashboard',
-    allowedScreens: ['dashboard', 'nuevo-envio', 'tracking', 'portal', 'retiros', 'hosts', 'tarifas'],
-  },
 }
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false)
-  const [role, setRole] = useState<UserRole>('admin')
-  const [screen, setScreen] = useState<Screen>('dashboard')
+  const [role, setRole] = useState<UserRole>('cliente')
+  const [screen, setScreen] = useState<Screen>('portal')
   const [toast, setToast] = useState('')
   const [modal, setModal] = useState(false)
   const [deliveryMode, setDeliveryMode] = useState<'domicilio' | 'host'>('domicilio')
@@ -92,7 +86,7 @@ function App() {
   const currentRole = roleConfig[role]
   const availableNavItems = navItems.filter((item) => currentRole.allowedScreens.includes(item.key) && item.key !== 'portal')
   const hasCorporatePortal = currentRole.allowedScreens.includes('portal')
-  const currentUserLabel = role === 'cliente' ? 'Cliente demo' : role === 'host' ? 'Punto Host demo' : 'Operador TransCor'
+  const currentUserLabel = role === 'cliente' ? 'Cliente demo' : 'Punto Host demo'
 
   return (
     <div className="app-shell">
@@ -276,7 +270,7 @@ function App() {
 }
 
 function Login({ onLogin }: { onLogin: (role: UserRole) => void }) {
-  const [selectedRole, setSelectedRole] = useState<UserRole>('admin')
+  const [selectedRole, setSelectedRole] = useState<UserRole>('cliente')
 
   return (
     <div className="login-page">
