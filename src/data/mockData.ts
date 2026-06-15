@@ -34,7 +34,7 @@ export type HostPoint = {
 export const navItems: { key: Screen; label: string; icon: string }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: 'IN' },
   { key: 'nuevo-envio', label: 'Nuevo envio', icon: 'NE' },
-  { key: 'tracking', label: 'Tracking', icon: 'TR' },
+  { key: 'tracking', label: 'Mis envios', icon: 'ME' },
   { key: 'portal', label: 'Portal corporativo', icon: 'PC' },
   { key: 'retiros', label: 'Solicitudes de retiro', icon: 'SR' },
   { key: 'hosts', label: 'Puntos Host', icon: 'PH' },

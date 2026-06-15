@@ -57,7 +57,6 @@ function App() {
   const [deliveryMode, setDeliveryMode] = useState<'domicilio' | 'host'>('domicilio')
   const [selectedHost, setSelectedHost] = useState(hostPoints[0])
   const [tariffCalculated, setTariffCalculated] = useState(false)
-  const [trackingSearched, setTrackingSearched] = useState(false)
   const [portalTab, setPortalTab] = useState<PortalTab>('inicio')
   const [hostTab, setHostTab] = useState<HostTab>('administracion')
   const [tarifaTab, setTarifaTab] = useState<TarifaTab>('zonas')
@@ -91,7 +90,8 @@ function App() {
   }
 
   const currentRole = roleConfig[role]
-  const availableNavItems = navItems.filter((item) => currentRole.allowedScreens.includes(item.key))
+  const availableNavItems = navItems.filter((item) => currentRole.allowedScreens.includes(item.key) && item.key !== 'portal')
+  const hasCorporatePortal = currentRole.allowedScreens.includes('portal')
   const currentUserLabel = role === 'cliente' ? 'Cliente demo' : role === 'host' ? 'Punto Host demo' : 'Operador TransCor'
 
   return (
@@ -120,6 +120,19 @@ function App() {
               {item.label}
             </button>
           ))}
+          {hasCorporatePortal && (
+            <div className="client-only-access">
+              <span>Para clientes operativos:</span>
+              <button
+                className={screen === 'portal' ? 'active' : ''}
+                onClick={() => goTo('portal')}
+                type="button"
+              >
+                <span>PC</span>
+                Portal corporativo
+              </button>
+            </div>
+          )}
         </nav>
       </aside>
 
@@ -150,9 +163,8 @@ function App() {
               goTo('hosts')
             }}
             onTrack={(code) => {
-              setTrackingSearched(true)
               goTo('tracking')
-              notify(`Tracking abierto para ${code}`)
+              notify(`Mis envios abierto para ${code}`)
             }}
             onPrint={(code) => notify(`Etiqueta ${code} enviada a impresion.`)}
           />
@@ -177,16 +189,11 @@ function App() {
           />
         )}
         {screen === 'tracking' && (
-          <Tracking
-            searched={trackingSearched}
-            shipment={shipments[0]}
-            selectedHost={selectedHost}
-            onSearch={() => {
-              setTrackingSearched(true)
-              notify('Envio encontrado en datos mockeados.')
+          <MyShipments
+            onTrack={(shipment) => {
+              const location = shipment.host ?? shipment.destination
+              notify(`Track demo: ${shipment.code} esta en ${shipment.status}. Referencia: ${location}.`)
             }}
-            onCopy={() => notify('Codigo de retiro copiado: HOST-8421.')}
-            onLocation={() => notify('Ubicacion abierta en modo demostracion.')}
           />
         )}
         {screen === 'portal' && (
@@ -252,12 +259,11 @@ function App() {
               className="primary"
               onClick={() => {
                 setModal(false)
-                setTrackingSearched(true)
                 goTo('tracking')
               }}
               type="button"
             >
-              Ver tracking
+              Ver mis envios
             </button>
             <button onClick={() => notify('Etiqueta TC-2026-0001 enviada a impresion.')} type="button">
               Imprimir etiqueta
@@ -355,7 +361,7 @@ function Dashboard({
           <h2>Recorrido corto para defender el modulo</h2>
         </div>
         <ol>
-          {['Crear envio', 'Seleccionar Punto Host', 'Confirmar envio', 'Consultar tracking', 'Validar retiro en Punto Host'].map((step, index) => (
+          {['Crear envio', 'Seleccionar Punto Host', 'Confirmar envio', 'Consultar mis envios', 'Validar retiro en Punto Host'].map((step, index) => (
             <li key={step}>
               <span>{index + 1}</span>
               {step}
@@ -396,7 +402,7 @@ function Dashboard({
                   <td>{shipment.estimated}</td>
                   <td>
                     <div className="mini-actions">
-                      <button onClick={() => onTrack(shipment.code)} type="button">Ver tracking</button>
+                      <button onClick={() => onTrack(shipment.code)} type="button">Track</button>
                       <button onClick={() => onPrint(shipment.code)} type="button">Imprimir etiqueta</button>
                     </div>
                   </td>
@@ -550,7 +556,7 @@ function NewShipment({
   )
 }
 
-function Tracking({
+export function Tracking({
   searched,
   shipment,
   selectedHost,
@@ -569,7 +575,7 @@ function Tracking({
   const currentStep = 3
   return (
     <>
-      <PageHeader title="Tracking" subtitle="Consulta publica y operativa de envios" />
+      <PageHeader title="Mis envios" subtitle="Consulta publica y operativa de envios" />
       <Section title="Buscar envio">
         <div className="search-row">
           <input defaultValue="TC-2026-0001" placeholder="Codigo de seguimiento" />
@@ -622,6 +628,50 @@ function Tracking({
           </section>
         </>
       )}
+    </>
+  )
+}
+
+function MyShipments({ onTrack }: { onTrack: (shipment: Shipment) => void }) {
+  return (
+    <>
+      <PageHeader title="Mis envios" subtitle="Listado completo de envios del cliente y consulta rapida de ubicacion" />
+      <Section title="Todos los envios">
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Codigo</th>
+                <th>Cliente</th>
+                <th>Destinatario</th>
+                <th>Servicio</th>
+                <th>Modalidad</th>
+                <th>Estado</th>
+                <th>Referencia</th>
+                <th>Fecha estimada</th>
+                <th>Accion</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shipments.map((shipment) => (
+                <tr key={shipment.code}>
+                  <td><strong>{shipment.code}</strong></td>
+                  <td>{shipment.client}</td>
+                  <td>{shipment.recipient}</td>
+                  <td>{shipment.service}</td>
+                  <td>{shipment.modality}</td>
+                  <td><StatusBadge status={shipment.status} /></td>
+                  <td>{shipment.host ?? shipment.destination}</td>
+                  <td>{shipment.estimated}</td>
+                  <td>
+                    <button onClick={() => onTrack(shipment)} type="button">Track</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
     </>
   )
 }
@@ -804,8 +854,6 @@ function HostPoints({
             </div>
             <div className="button-row">
               <button className="primary" onClick={() => onResult('Host guardado correctamente.')} type="button">Guardar Host</button>
-              <button onClick={() => onResult('Host aprobado y habilitado para crear puntos fisicos.')} type="button">Aprobar Host</button>
-              <button onClick={() => onResult('Host rechazado en simulacion.')} type="button">Rechazar Host</button>
             </div>
           </Section>
         </>
